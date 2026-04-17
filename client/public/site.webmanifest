@@ -1,0 +1,22 @@
+{
+    "name": "Curalink AI Medical Assistant",
+    "short_name": "Curalink",
+    "description": "AI-powered medical research assistant",
+    "icons": [
+        {
+            "src": "/medical-logo.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "/vite.svg",
+            "sizes": "32x32",
+            "type": "image/svg+xml"
+        }
+    ],
+    "theme_color": "#2563eb",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "start_url": "/",
+    "scope": "/"
+}
