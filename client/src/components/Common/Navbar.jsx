@@ -1,5 +1,5 @@
 // client/src/components/Common/Navbar.jsx
-// Premium navbar with dark mode toggle and animations
+// Premium navbar with dark mode toggle and animations - FIXED EXPORT
 
 import React, { useContext, useState, useEffect } from 'react';
 import { UserContext } from '../../contexts/UserContext';
@@ -7,20 +7,32 @@ import { ChatContext } from '../../contexts/ChatContext';
 
 const Navbar = ({ onToggleStructuredInput, showStructuredInput }) => {
     const { userContext, clearUserContext } = useContext(UserContext);
-    const { clearMessages, sessionId } = useContext(ChatContext);
+    const { messages, clearMessages, sessionId } = useContext(ChatContext);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
+        // Check saved dark mode preference
+        const savedDarkMode = localStorage.getItem('curalink-dark-mode');
+        if (savedDarkMode === 'true') {
+            setIsDarkMode(true);
+            document.documentElement.classList.add('dark-mode');
+        }
+        
         const handleScroll = () => setIsScrolled(window.scrollY > 10);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
     const toggleDarkMode = () => {
-        setIsDarkMode(!isDarkMode);
-        document.documentElement.classList.toggle('dark-mode');
-        localStorage.setItem('curalink-dark-mode', !isDarkMode);
+        const newDarkMode = !isDarkMode;
+        setIsDarkMode(newDarkMode);
+        if (newDarkMode) {
+            document.documentElement.classList.add('dark-mode');
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+        }
+        localStorage.setItem('curalink-dark-mode', newDarkMode);
     };
 
     const handleNewConversation = () => {
@@ -33,17 +45,19 @@ const Navbar = ({ onToggleStructuredInput, showStructuredInput }) => {
     };
 
     const handleExportConversation = () => {
-        const messages = JSON.parse(localStorage.getItem('curalink_messages') || '[]');
-        if (messages.length === 0) {
+        // FIXED: Use messages from ChatContext, not localStorage
+        if (!messages || messages.length === 0) {
             alert('No conversation to export');
             return;
         }
         
         const exportData = {
-            sessionId,
-            userContext,
-            messages,
-            exportedAt: new Date().toISOString()
+            sessionId: sessionId || 'no-session',
+            userContext: userContext || {},
+            messages: messages,
+            exportedAt: new Date().toISOString(),
+            appVersion: '1.0.0',
+            totalMessages: messages.length
         };
         
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -51,7 +65,9 @@ const Navbar = ({ onToggleStructuredInput, showStructuredInput }) => {
         const a = document.createElement('a');
         a.href = url;
         a.download = `curalink-conversation-${Date.now()}.json`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
@@ -63,7 +79,7 @@ const Navbar = ({ onToggleStructuredInput, showStructuredInput }) => {
                     Curalink <span className="logo-accent">AI</span>
                     <span className="logo-badge">BETA</span>
                 </a>
-                {userContext.diseaseOfInterest && (
+                {userContext?.diseaseOfInterest && (
                     <span className="context-badge glass-badge">
                         <span className="badge-icon">🔬</span>
                         {userContext.diseaseOfInterest}
@@ -118,7 +134,7 @@ const Navbar = ({ onToggleStructuredInput, showStructuredInput }) => {
                 </button>
                 
                 <a 
-                    href="https://github.com/your-repo/curalink" 
+                    href="https://github.com/vignesh-cs/Curalink---AI-Medical-Research-Assistant" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="navbar-button"

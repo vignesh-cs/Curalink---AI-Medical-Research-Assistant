@@ -1,5 +1,5 @@
 // server/src/controllers/chatController.js
-// ABSOLUTELY FIXED - BYPASSES BROKEN selectTopResults
+// FULLY FIXED - WITH PREFERENCES DEFAULT HANDLING
 
 const Conversation = require('../models/Conversation');
 const ResearchCache = require('../models/ResearchCache');
@@ -24,8 +24,19 @@ class ChatController {
             
             let conversation = await this.getOrCreateConversation(sessionId, userContext);
             
+            // FIXED: Update user context with preferences default
             if (Object.keys(userContext).length > 0) {
-                conversation.userContext = { ...conversation.userContext, ...userContext };
+                const updatedContext = {
+                    patientName: userContext.patientName || conversation.userContext?.patientName || '',
+                    diseaseOfInterest: userContext.diseaseOfInterest || conversation.userContext?.diseaseOfInterest || '',
+                    location: userContext.location || conversation.userContext?.location || '',
+                    preferences: {
+                        detailLevel: userContext.preferences?.detailLevel || conversation.userContext?.preferences?.detailLevel || 'detailed',
+                        language: userContext.preferences?.language || conversation.userContext?.preferences?.language || 'en'
+                    },
+                    history: conversation.userContext?.history || []
+                };
+                conversation.userContext = updatedContext;
                 await conversation.save();
             }
             
@@ -234,10 +245,23 @@ class ChatController {
         try {
             const { userContext = {} } = req.body;
             const sessionId = this.generateSessionId();
+            
+            // FIXED: Ensure preferences exists
+            const contextWithDefaults = {
+                patientName: userContext.patientName || '',
+                diseaseOfInterest: userContext.diseaseOfInterest || '',
+                location: userContext.location || '',
+                preferences: {
+                    detailLevel: userContext.preferences?.detailLevel || 'detailed',
+                    language: userContext.preferences?.language || 'en'
+                },
+                history: []
+            };
+            
             const conversation = new Conversation({
                 sessionId,
-                userContext,
-                contextVector: { topicChain: userContext.diseaseOfInterest ? [userContext.diseaseOfInterest] : [] },
+                userContext: contextWithDefaults,
+                contextVector: { topicChain: contextWithDefaults.diseaseOfInterest ? [contextWithDefaults.diseaseOfInterest] : [] },
                 metadata: { ipAddress: req.ip, userAgent: req.headers['user-agent'] }
             });
             await conversation.save();
@@ -247,14 +271,27 @@ class ChatController {
         }
     }
 
+    // FIXED: getOrCreateConversation with preferences default
     async getOrCreateConversation(sessionId, userContext) {
         let conversation = null;
         if (sessionId) conversation = await Conversation.findOne({ sessionId });
+        
         if (!conversation) {
+            const contextWithDefaults = {
+                patientName: userContext?.patientName || '',
+                diseaseOfInterest: userContext?.diseaseOfInterest || '',
+                location: userContext?.location || '',
+                preferences: {
+                    detailLevel: userContext?.preferences?.detailLevel || 'detailed',
+                    language: userContext?.preferences?.language || 'en'
+                },
+                history: []
+            };
+            
             conversation = new Conversation({
                 sessionId: sessionId || this.generateSessionId(),
-                userContext,
-                contextVector: { topicChain: userContext.diseaseOfInterest ? [userContext.diseaseOfInterest] : [] }
+                userContext: contextWithDefaults,
+                contextVector: { topicChain: contextWithDefaults.diseaseOfInterest ? [contextWithDefaults.diseaseOfInterest] : [] }
             });
             await conversation.save();
         }

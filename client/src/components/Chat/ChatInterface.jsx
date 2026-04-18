@@ -1,5 +1,5 @@
 // client/src/components/Chat/ChatInterface.jsx
-// Premium chat interface with animations and progress tracking
+// Premium chat interface with animations and progress tracking - FULLY FIXED
 
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { ChatContext } from '../../contexts/ChatContext';
@@ -20,6 +20,29 @@ const ChatInterface = ({ sessionId, onSessionCreated }) => {
     const inputRef = useRef(null);
     const chatContainerRef = useRef(null);
 
+    // Disease patterns for extraction
+    const diseasePatterns = [
+        'lung cancer', 'diabetes', 'alzheimer', 'parkinson', 
+        'heart disease', 'breast cancer', 'prostate cancer', 
+        'colorectal cancer', 'asthma', 'arthritis', 'melanoma', 
+        'leukemia', 'bronchitis', 'copd', 'hypertension', 'stroke',
+        'multiple sclerosis', 'crohn\'s disease', 'ulcerative colitis',
+        'psoriasis', 'eczema', 'migraine', 'epilepsy', 'fibromyalgia'
+    ];
+
+    // Extract disease from message text
+    const extractDiseaseFromMessage = (message) => {
+        const messageLower = message.toLowerCase();
+        for (const pattern of diseasePatterns) {
+            if (messageLower.includes(pattern)) {
+                return pattern;
+            }
+        }
+        // If no pattern matches, return first 3 words as fallback
+        const words = message.split(' ').slice(0, 3).join(' ');
+        return words || 'medical condition';
+    };
+
     // Smooth scroll with animation
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -27,7 +50,6 @@ const ChatInterface = ({ sessionId, onSessionCreated }) => {
 
     useEffect(() => {
         inputRef.current?.focus();
-        // Add entrance animation
         setTimeout(() => {
             chatContainerRef.current?.classList.add('chat-entrance-done');
         }, 100);
@@ -77,10 +99,21 @@ const ChatInterface = ({ sessionId, onSessionCreated }) => {
         try {
             let response;
             
+            // BUILD PROPER CONTEXT - CRITICAL FIX
+            const diseaseOfInterest = userContext.diseaseOfInterest || extractDiseaseFromMessage(userMessage);
+            const location = userContext.location || '';
+            
+            const contextToSend = {
+                diseaseOfInterest: diseaseOfInterest,
+                location: location
+            };
+            
+            console.log('Sending with context:', contextToSend); // Debug log
+            
             if (isFollowUp && sessionId) {
                 response = await sendFollowUp(userMessage, sessionId);
             } else {
-                response = await sendMessage(userMessage, sessionId, userContext);
+                response = await sendMessage(userMessage, sessionId, contextToSend);
                 if (response.sessionId && !sessionId) {
                     onSessionCreated(response.sessionId);
                 }

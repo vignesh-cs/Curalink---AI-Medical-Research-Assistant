@@ -1,5 +1,5 @@
 // client/src/contexts/UserContext.jsx
-// User context for managing user preferences and medical context
+// User context for managing user preferences and medical context - FIXED
 
 import React, { createContext, useState, useCallback } from 'react';
 
@@ -37,7 +37,7 @@ export const UserProvider = ({ children }) => {
                     condition,
                     timestamp: new Date().toISOString()
                 }
-            ].slice(-10) // Keep last 10 entries
+            ].slice(-10)
         }));
     }, []);
 
@@ -54,8 +54,10 @@ export const UserProvider = ({ children }) => {
         });
     }, []);
 
+    // CRITICAL FIX: Provide setUserContext directly
     const value = {
         userContext,
+        setUserContext,        // ✅ ADDED THIS
         updateUserContext,
         addToHistory,
         clearUserContext
