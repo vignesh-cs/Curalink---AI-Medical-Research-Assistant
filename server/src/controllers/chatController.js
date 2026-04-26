@@ -1,6 +1,7 @@
 // server/src/controllers/chatController.js
-// FULLY FIXED - WITH PREFERENCES DEFAULT HANDLING
+// FULLY FIXED - WITH MONGODB RECONNECTION HANDLING
 
+const mongoose = require('mongoose');
 const Conversation = require('../models/Conversation');
 const ResearchCache = require('../models/ResearchCache');
 const queryExpander = require('../services/retrieval/queryExpander');
@@ -13,11 +14,36 @@ const logger = require('../config/logger');
 const crypto = require('crypto');
 
 class ChatController {
+
+    // Helper: Ensure MongoDB is connected before any operation
+    async ensureDbConnection() {
+        if (mongoose.connection.readyState !== 1) {
+            logger.warn('MongoDB disconnected, attempting reconnection...');
+            try {
+                const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/curalink';
+                await mongoose.connect(mongoURI, {
+                    maxPoolSize: 10,
+                    serverSelectionTimeoutMS: 5000,
+                    socketTimeoutMS: 45000,
+                    heartbeatFrequencyMS: 10000,
+                    retryWrites: true,
+                    retryReads: true
+                });
+                logger.info('MongoDB reconnected successfully');
+            } catch (error) {
+                logger.error('MongoDB reconnection failed:', error.message);
+                throw new Error('Database connection unavailable. Please try again.');
+            }
+        }
+    }
     
     async processMessage(req, res, next) {
         const startTime = Date.now();
         
         try {
+            // Ensure MongoDB is connected before processing
+            await this.ensureDbConnection();
+            
             const { message, sessionId, userContext = {}, isFollowUp = false } = req.body;
             
             logger.info('Processing:', { sessionId, message: message.substring(0, 50) });
@@ -52,7 +78,11 @@ class ChatController {
             if (!researchData) {
                 logger.info('Fetching fresh research data');
                 researchData = await this.retrieveResearchData(expandedContext);
-                await this.cacheResearchData(queryHash, expandedContext, researchData);
+                try {
+                    await this.cacheResearchData(queryHash, expandedContext, researchData);
+                } catch (cacheError) {
+                    logger.warn('Cache save failed (non-critical):', cacheError.message);
+                }
             } else {
                 logger.info('Using cached research data');
             }
@@ -133,15 +163,25 @@ class ChatController {
                 }
             };
             
-            await conversation.addMessage(userMessage);
-            await conversation.addMessage(assistantMessage);
+            // Save messages with error handling
+            try {
+                await conversation.addMessage(userMessage);
+                await conversation.addMessage(assistantMessage);
+            } catch (saveError) {
+                logger.warn('Failed to save conversation (non-critical):', saveError.message);
+                // Continue even if save fails - response still goes to user
+            }
             
             const io = req.app.get('io');
             if (io && conversation.sessionId) {
-                io.to(conversation.sessionId).emit('message-processed', {
-                    sessionId: conversation.sessionId,
-                    message: assistantMessage
-                });
+                try {
+                    io.to(conversation.sessionId).emit('message-processed', {
+                        sessionId: conversation.sessionId,
+                        message: assistantMessage
+                    });
+                } catch (socketError) {
+                    logger.warn('Socket emit failed:', socketError.message);
+                }
             }
             
             res.status(200).json({
@@ -169,6 +209,8 @@ class ChatController {
     async processFollowUp(req, res, next) {
         const startTime = Date.now();
         try {
+            await this.ensureDbConnection();
+            
             const { message, sessionId } = req.body;
             const conversation = await Conversation.findOne({ sessionId });
             if (!conversation) {
@@ -214,8 +256,12 @@ class ChatController {
                 metadata: { isFollowUp: true, processingTime: Date.now() - startTime }
             };
             
-            await conversation.addMessage(userMessage);
-            await conversation.addMessage(assistantMessage);
+            try {
+                await conversation.addMessage(userMessage);
+                await conversation.addMessage(assistantMessage);
+            } catch (saveError) {
+                logger.warn('Failed to save follow-up:', saveError.message);
+            }
             
             res.status(200).json({ success: true, sessionId: conversation.sessionId, message: assistantMessage, metadata: { processingTime: Date.now() - startTime } });
         } catch (error) {
@@ -226,6 +272,8 @@ class ChatController {
 
     async getConversation(req, res, next) {
         try {
+            await this.ensureDbConnection();
+            
             const { sessionId } = req.params;
             const conversation = await Conversation.findOne({ sessionId });
             if (!conversation) return res.status(404).json({ success: false, error: 'Not found' });
@@ -243,10 +291,11 @@ class ChatController {
 
     async createConversation(req, res, next) {
         try {
+            await this.ensureDbConnection();
+            
             const { userContext = {} } = req.body;
             const sessionId = this.generateSessionId();
             
-            // FIXED: Ensure preferences exists
             const contextWithDefaults = {
                 patientName: userContext.patientName || '',
                 diseaseOfInterest: userContext.diseaseOfInterest || '',
@@ -271,10 +320,17 @@ class ChatController {
         }
     }
 
-    // FIXED: getOrCreateConversation with preferences default
     async getOrCreateConversation(sessionId, userContext) {
+        await this.ensureDbConnection();
+        
         let conversation = null;
-        if (sessionId) conversation = await Conversation.findOne({ sessionId });
+        if (sessionId) {
+            try {
+                conversation = await Conversation.findOne({ sessionId });
+            } catch (error) {
+                logger.warn('Error finding conversation:', error.message);
+            }
+        }
         
         if (!conversation) {
             const contextWithDefaults = {
@@ -293,7 +349,11 @@ class ChatController {
                 userContext: contextWithDefaults,
                 contextVector: { topicChain: contextWithDefaults.diseaseOfInterest ? [contextWithDefaults.diseaseOfInterest] : [] }
             });
-            await conversation.save();
+            try {
+                await conversation.save();
+            } catch (error) {
+                logger.warn('Error saving new conversation:', error.message);
+            }
         }
         return conversation;
     }
@@ -352,6 +412,8 @@ class ChatController {
 
     async cacheResearchData(queryHash, expandedContext, researchData) {
         try {
+            await this.ensureDbConnection();
+            
             const cacheEntry = new ResearchCache({
                 queryHash,
                 originalQuery: expandedContext.originalQuery || expandedContext.expandedQuery || '',
@@ -370,6 +432,7 @@ class ChatController {
             logger.info('Cached successfully - Publications:', researchData.publications?.length || 0);
         } catch (error) {
             logger.error('Cache error:', error.message);
+            // Don't throw - caching failure shouldn't break the request
         }
     }
 

@@ -1,6 +1,3 @@
-// server/src/config/database.js
-// MongoDB connection configuration with connection pooling and retry logic
-
 const mongoose = require('mongoose');
 const logger = require('./logger');
 
@@ -9,12 +6,14 @@ const connectDB = async () => {
         const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/curalink';
         
         const options = {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000,
             socketTimeoutMS: 45000,
-            family: 4
+            family: 4,
+            // ADD THESE FOR BETTER RECONNECTION
+            heartbeatFrequencyMS: 10000,
+            retryWrites: true,
+            retryReads: true
         };
 
         await mongoose.connect(mongoURI, options);
@@ -28,13 +27,18 @@ const connectDB = async () => {
         
         mongoose.connection.on('disconnected', () => {
             logger.warn('MongoDB disconnected, attempting to reconnect...');
+            // Auto-reconnect after 5 seconds
+            setTimeout(async () => {
+                try {
+                    await mongoose.connect(mongoURI, options);
+                    logger.info('MongoDB reconnected successfully');
+                } catch (error) {
+                    logger.error('MongoDB reconnection failed:', error);
+                }
+            }, 5000);
         });
         
-        mongoose.connection.on('reconnected', () => {
-            logger.info('MongoDB reconnected successfully');
-        });
-
-        // Create indexes for better query performance
+        // Create indexes
         await createIndexes();
         
     } catch (error) {
