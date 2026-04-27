@@ -1,55 +1,38 @@
 // client/src/components/Common/ErrorBoundary.jsx
-// Error boundary for graceful error handling
+// Curalink v2.0 - Error Boundary
 
 import React from 'react';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { hasError: false, error: null, errorInfo: null };
+        this.state = { hasError: false, error: null };
     }
 
     static getDerivedStateFromError(error) {
-        return { hasError: true };
+        return { hasError: true, error };
     }
 
     componentDidCatch(error, errorInfo) {
-        console.error('Error caught by boundary:', error, errorInfo);
-        this.setState({ error, errorInfo });
+        console.error('Curalink Error:', error, errorInfo);
     }
-
-    handleReset = () => {
-        this.setState({ hasError: false, error: null, errorInfo: null });
-        window.location.reload();
-    };
 
     render() {
         if (this.state.hasError) {
             return (
-                <div className="error-boundary">
-                    <div className="error-content">
-                        <h2>Something went wrong</h2>
-                        <p>We apologize for the inconvenience. Please try again.</p>
-                        
-                        {process.env.NODE_ENV === 'development' && (
-                            <details className="error-details">
-                                <summary>Error Details</summary>
-                                <pre>{this.state.error?.toString()}</pre>
-                                <pre>{this.state.errorInfo?.componentStack}</pre>
-                            </details>
-                        )}
-                        
-                        <button 
-                            onClick={this.handleReset}
-                            className="btn-primary"
-                        >
-                            Reload Application
-                        </button>
-                    </div>
+                <div className="crl-error-boundary">
+                    <svg width="64" height="64" viewBox="0 0 64 64">
+                        <circle cx="32" cy="32" r="28" fill="none" stroke="var(--crl-error)" strokeWidth="2"/>
+                        <path d="M22 22l20 20M42 22L22 42" stroke="var(--crl-error)" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <h2>Something went wrong</h2>
+                    <p>Please refresh the page to continue.</p>
+                    <button className="crl-btn-primary" onClick={() => window.location.reload()}>
+                        Reload Curalink
+                    </button>
                 </div>
             );
         }
-
         return this.props.children;
     }
 }

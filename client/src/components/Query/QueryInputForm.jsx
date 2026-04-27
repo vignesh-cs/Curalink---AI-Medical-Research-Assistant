@@ -1,255 +1,166 @@
 // client/src/components/Query/QueryInputForm.jsx
-// Structured query input form for detailed medical context
+// v3 — minimal clean design, fixed close, no newspaper bg
 
 import React, { useState, useContext } from 'react';
 import { UserContext } from '../../contexts/UserContext';
 import { ChatContext } from '../../contexts/ChatContext';
 import { createConversation, sendMessage } from '../../services/api';
 
-const QueryInputForm = ({ onSessionCreated, onComplete }) => {
-    const { setUserContext } = useContext(UserContext);
-    const { addMessage, setLoading } = useContext(ChatContext);
-    
-    const [formData, setFormData] = useState({
-        patientName: '',
-        diseaseOfInterest: '',
-        additionalQuery: '',
-        location: '',
-        detailLevel: 'detailed'
-    });
-    
-    const [errors, setErrors] = useState({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
+const StructuredQueryModal = ({ onClose, onSessionCreated, onComplete }) => {
+  const { setUserContext } = useContext(UserContext);
+  const { addMessage, setLoading } = useContext(ChatContext);
+  const [formData, setFormData] = useState({
+    patientName: '',
+    diseaseOfInterest: '',
+    additionalQuery: '',
+    location: '',
+    detailLevel: 'detailed'
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const diseaseSuggestions = [
-        'Parkinson\'s disease',
-        'Alzheimer\'s disease',
-        'Diabetes',
-        'Lung cancer',
-        'Heart disease',
-        'Breast cancer',
-        'Multiple sclerosis',
-        'Rheumatoid arthritis',
-        'Asthma',
-        'Depression'
-    ];
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
+  };
 
-    const validateForm = () => {
-        const newErrors = {};
-        
-        if (!formData.diseaseOfInterest.trim()) {
-            newErrors.diseaseOfInterest = 'Disease of interest is required';
-        }
-        
-        if (!formData.additionalQuery.trim()) {
-            newErrors.additionalQuery = 'Query is required';
-        } else if (formData.additionalQuery.length < 5) {
-            newErrors.additionalQuery = 'Query must be at least 5 characters';
-        }
-        
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+  const handleClose = () => {
+    if (typeof onClose === 'function') onClose();
+    else if (typeof onComplete === 'function') onComplete();
+  };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        
-        // Clear error for this field
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: null }));
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    if (!formData.diseaseOfInterest.trim()) newErrors.diseaseOfInterest = 'Required';
+    if (!formData.additionalQuery.trim()) newErrors.additionalQuery = 'Required';
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        if (!validateForm()) {
-            return;
-        }
-        
-        setIsSubmitting(true);
-        
-        try {
-            // Set user context
-            setUserContext({
-                patientName: formData.patientName,
-                diseaseOfInterest: formData.diseaseOfInterest,
-                location: formData.location,
-                preferences: {
-                    detailLevel: formData.detailLevel
-                }
-            });
-            
-            // Create conversation
-            const conversationResponse = await createConversation({
-                userContext: {
-                    patientName: formData.patientName,
-                    diseaseOfInterest: formData.diseaseOfInterest,
-                    location: formData.location
-                }
-            });
-            
-            const sessionId = conversationResponse.sessionId;
-            onSessionCreated(sessionId);
-            
-            // Send initial query
-            setLoading(true);
-            
-            const messageResponse = await sendMessage(
-                formData.additionalQuery,
-                sessionId,
-                {
-                    diseaseOfInterest: formData.diseaseOfInterest,
-                    location: formData.location
-                }
-            );
-            
-            // Add messages to chat
-            addMessage({
-                role: 'user',
-                content: formData.additionalQuery,
-                timestamp: new Date().toISOString()
-            });
-            
-            addMessage({
-                role: 'assistant',
-                content: messageResponse.message.content,
-                structuredContent: messageResponse.message.structuredContent,
-                metadata: messageResponse.metadata,
-                timestamp: new Date().toISOString()
-            });
-            
-            // Complete and switch to chat view
-            onComplete();
-            
-        } catch (error) {
-            console.error('Error submitting query:', error);
-            setErrors({ submit: 'Failed to process query. Please try again.' });
-        } finally {
-            setIsSubmitting(false);
-            setLoading(false);
-        }
-    };
+    setIsSubmitting(true);
+    try {
+      setUserContext({
+        patientName: formData.patientName,
+        diseaseOfInterest: formData.diseaseOfInterest,
+        location: formData.location,
+        preferences: { detailLevel: formData.detailLevel }
+      });
 
-    return (
-        <div className="query-input-form-container">
-            <h2 className="form-title">Structured Medical Query</h2>
-            <p className="form-description">
-                Provide detailed context for more accurate and personalized research results.
-            </p>
-            
-            <form onSubmit={handleSubmit} className="query-form">
-                <div className="form-group">
-                    <label htmlFor="patientName">Patient Name (Optional)</label>
-                    <input
-                        type="text"
-                        id="patientName"
-                        name="patientName"
-                        value={formData.patientName}
-                        onChange={handleChange}
-                        placeholder="e.g., John Smith"
-                        className="form-input"
-                    />
-                </div>
-                
-                <div className="form-group">
-                    <label htmlFor="diseaseOfInterest">
-                        Disease of Interest <span className="required">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        id="diseaseOfInterest"
-                        name="diseaseOfInterest"
-                        value={formData.diseaseOfInterest}
-                        onChange={handleChange}
-                        placeholder="e.g., Parkinson's disease"
-                        className={`form-input ${errors.diseaseOfInterest ? 'error' : ''}`}
-                        list="disease-suggestions"
-                    />
-                    <datalist id="disease-suggestions">
-                        {diseaseSuggestions.map(disease => (
-                            <option key={disease} value={disease} />
-                        ))}
-                    </datalist>
-                    {errors.diseaseOfInterest && (
-                        <span className="error-message">{errors.diseaseOfInterest}</span>
-                    )}
-                </div>
-                
-                <div className="form-group">
-                    <label htmlFor="additionalQuery">
-                        Additional Query <span className="required">*</span>
-                    </label>
-                    <textarea
-                        id="additionalQuery"
-                        name="additionalQuery"
-                        value={formData.additionalQuery}
-                        onChange={handleChange}
-                        placeholder="e.g., Deep Brain Stimulation effectiveness"
-                        className={`form-textarea ${errors.additionalQuery ? 'error' : ''}`}
-                        rows={3}
-                    />
-                    {errors.additionalQuery && (
-                        <span className="error-message">{errors.additionalQuery}</span>
-                    )}
-                    <small className="form-hint">
-                        Your query will be automatically expanded: 
-                        "{formData.additionalQuery} + {formData.diseaseOfInterest || '[disease]'}"
-                    </small>
-                </div>
-                
-                <div className="form-group">
-                    <label htmlFor="location">Location (Optional - for clinical trials)</label>
-                    <input
-                        type="text"
-                        id="location"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        placeholder="e.g., Toronto, Canada"
-                        className="form-input"
-                    />
-                </div>
-                
-                <div className="form-group">
-                    <label htmlFor="detailLevel">Response Detail Level</label>
-                    <select
-                        id="detailLevel"
-                        name="detailLevel"
-                        value={formData.detailLevel}
-                        onChange={handleChange}
-                        className="form-select"
-                    >
-                        <option value="basic">Basic - Overview only</option>
-                        <option value="detailed">Detailed - With key insights</option>
-                        <option value="comprehensive">Comprehensive - Full analysis</option>
-                    </select>
-                </div>
-                
-                {errors.submit && (
-                    <div className="form-error">{errors.submit}</div>
-                )}
-                
-                <div className="form-actions">
-                    <button
-                        type="button"
-                        onClick={onComplete}
-                        className="btn-secondary"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? 'Processing...' : 'Submit Query'}
-                    </button>
-                </div>
-            </form>
+      const convResp = await createConversation({
+        userContext: {
+          diseaseOfInterest: formData.diseaseOfInterest,
+          location: formData.location
+        }
+      });
+
+      const sid = convResp.sessionId;
+      onSessionCreated(sid);
+      setLoading(true);
+
+      const msgResp = await sendMessage(formData.additionalQuery, sid, {
+        patientName: formData.patientName,
+        diseaseOfInterest: formData.diseaseOfInterest,
+        location: formData.location,
+        preferences: { detailLevel: formData.detailLevel }
+      });
+
+      addMessage({ role: 'user', content: formData.additionalQuery, timestamp: new Date().toISOString() });
+      addMessage({ role: 'assistant', content: msgResp.message.content, structuredContent: msgResp.message.structuredContent, metadata: msgResp.metadata, timestamp: new Date().toISOString() });
+      if (typeof onComplete === 'function') onComplete();
+    } catch (err) {
+      setErrors({ submit: 'Failed to process query. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="sq-root" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="sq-card">
+        {/* Header */}
+        <div className="sq-header">
+          <div className="sq-header-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+              <line x1="9" y1="17" x2="15" y2="17"/>
+            </svg>
+          </div>
+          <div className="sq-header-text">
+            <h2 className="sq-title">Structured Medical Query</h2>
+            <p className="sq-desc">Provide context for accurate, evidence-based results</p>
+          </div>
+          <button className="sq-close" onClick={handleClose} type="button" aria-label="Close">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
-    );
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="sq-form">
+          <div className="sq-row">
+            <div className="sq-field">
+              <label className="sq-label">Patient Name</label>
+              <input type="text" name="patientName" value={formData.patientName}
+                onChange={handleChange} placeholder="e.g., John Smith" className="sq-input" />
+            </div>
+            <div className="sq-field">
+              <label className="sq-label">Location</label>
+              <input type="text" name="location" value={formData.location}
+                onChange={handleChange} placeholder="e.g., Chennai, India" className="sq-input" />
+            </div>
+          </div>
+
+          <div className="sq-field">
+            <label className="sq-label">Disease of Interest <span className="sq-req">*</span></label>
+            <input type="text" name="diseaseOfInterest" value={formData.diseaseOfInterest}
+              onChange={handleChange} placeholder="e.g., Lung Cancer, Type 2 Diabetes"
+              className={`sq-input${errors.diseaseOfInterest ? ' sq-input-err' : ''}`} />
+            {errors.diseaseOfInterest && <span className="sq-err">{errors.diseaseOfInterest}</span>}
+          </div>
+
+          <div className="sq-field">
+            <label className="sq-label">Research Query <span className="sq-req">*</span></label>
+            <textarea name="additionalQuery" value={formData.additionalQuery}
+              onChange={handleChange}
+              placeholder="e.g., What are the latest treatment protocols and clinical trial outcomes?"
+              rows={4}
+              className={`sq-input sq-textarea${errors.additionalQuery ? ' sq-input-err' : ''}`} />
+            {errors.additionalQuery && <span className="sq-err">{errors.additionalQuery}</span>}
+          </div>
+
+          <div className="sq-field">
+            <label className="sq-label">Detail Level</label>
+            <div className="sq-levels">
+              {['brief', 'detailed', 'comprehensive'].map(level => (
+                <label key={level} className={`sq-level${formData.detailLevel === level ? ' active' : ''}`}>
+                  <input type="radio" name="detailLevel" value={level}
+                    checked={formData.detailLevel === level}
+                    onChange={handleChange} style={{ display: 'none' }} />
+                  {level.charAt(0).toUpperCase() + level.slice(1)}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {errors.submit && <div className="sq-submit-err">{errors.submit}</div>}
+
+          <div className="sq-actions">
+            <button type="button" onClick={handleClose} className="sq-btn-cancel">Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="sq-btn-submit">
+              {isSubmitting ? (
+                <><span className="sq-spinner" />Processing...</>
+              ) : 'Submit Query'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
-export default QueryInputForm;
+export default StructuredQueryModal;

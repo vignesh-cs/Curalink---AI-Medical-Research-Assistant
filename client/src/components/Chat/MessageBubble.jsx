@@ -1,136 +1,25 @@
-// client/src/components/Chat/MessageBubble.jsx
-// Premium message bubble with typing animation and 3D effects
+import React from 'react';
 
-import React, { useState, useEffect } from 'react';
-import StructuredResponse from './StructuredResponse';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-
-const MessageBubble = ({ message, isLast }) => {
-    const [showStructured, setShowStructured] = useState(true);
-    const [isVisible, setIsVisible] = useState(false);
-    const [displayText, setDisplayText] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
-
+const MessageBubble = ({ message }) => {
     const isUser = message.role === 'user';
 
-    useEffect(() => {
-        setIsVisible(true);
-        
-        // Typing animation for assistant messages
-        if (!isUser && isLast && message.content && !message.structuredContent) {
-            setIsTyping(true);
-            const text = message.content;
-            let index = 0;
-            setDisplayText('');
-            
-            const interval = setInterval(() => {
-                if (index < text.length) {
-                    setDisplayText(prev => prev + text[index]);
-                    index++;
-                } else {
-                    setIsTyping(false);
-                    clearInterval(interval);
-                }
-            }, 15);
-            
-            return () => clearInterval(interval);
-        } else {
-            setDisplayText(message.content);
-        }
-    }, [message, isUser, isLast]);
-
-    const formatTimestamp = (timestamp) => {
-        if (!timestamp) return '';
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    };
-
     return (
-        <div 
-            className={`message-bubble-container ${isUser ? 'user-message' : 'assistant-message'} ${isVisible ? 'message-visible' : ''}`}
-            style={{ '--animation-order': isUser ? 0 : 1 }}
-        >
-            <div className="message-header">
-                <span className="message-role">
-                    <span className="role-icon">{isUser ? '👤' : '🤖'}</span>
-                    {isUser ? 'You' : 'Curalink Assistant'}
-                </span>
-                <span className="message-time">{formatTimestamp(message.timestamp)}</span>
-            </div>
-            
-            <div className={`message-content ${isUser ? 'user-content' : 'assistant-content'} glass-card`}>
+        <div className={`msg-row ${isUser ? 'msg-user' : 'msg-bot'}`}>
+            <div className={`msg-avatar ${isUser ? 'msg-avatar-user' : 'msg-avatar-bot'}`}>
                 {isUser ? (
-                    <p className="user-message-text">{message.content}</p>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
                 ) : (
-                    <>
-                        {message.structuredContent && showStructured ? (
-                            <StructuredResponse 
-                                content={message.structuredContent}
-                                metadata={message.metadata}
-                            />
-                        ) : (
-                            <div className="markdown-wrapper">
-                                <ReactMarkdown 
-                                    remarkPlugins={[remarkGfm]}
-                                    className="markdown-content"
-                                >
-                                    {isTyping ? displayText : message.content}
-                                </ReactMarkdown>
-                                {isTyping && <span className="typing-cursor">|</span>}
-                            </div>
-                        )}
-                        
-                        {message.structuredContent && (
-                            <div className="message-controls">
-                                <button
-                                    className="text-button"
-                                    onClick={() => setShowStructured(!showStructured)}
-                                >
-                                    <span className="btn-icon">{showStructured ? '📝' : '📊'}</span>
-                                    {showStructured ? 'Show Raw Response' : 'Show Structured View'}
-                                </button>
-                                
-                                {message.metadata && (
-                                    <span className="message-metadata">
-                                        <span className="metadata-item">
-                                            📚 {message.metadata.sourcesCount || 
-                                                message.structuredContent.sources?.length || 0} sources
-                                        </span>
-                                        <span className="metadata-item">
-                                            ⚡ {message.metadata.processingTime}ms
-                                        </span>
-                                    </span>
-                                )}
-                            </div>
-                        )}
-                        
-                        {message.error && (
-                            <div className="error-indicator glass-error">
-                                <span className="error-icon">⚠️</span>
-                                <span>Error processing request. Please try again.</span>
-                            </div>
-                        )}
-                    </>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 )}
             </div>
-            
-            {!isUser && isLast && !message.error && (
-                <div className="message-actions">
-                    <button className="action-btn" title="Copy response">
-                        📋
-                    </button>
-                    <button className="action-btn" title="Regenerate">
-                        🔄
-                    </button>
-                    <button className="action-btn" title="Save">
-                        ⭐
-                    </button>
-                </div>
-            )}
+            <div className={`msg-bubble ${isUser ? 'msg-bubble-user' : 'msg-bubble-bot'}`}>
+                <div className="msg-text">{message.content}</div>
+                {message.metadata && (
+                    <div className="msg-meta">
+                        {message.metadata.sourcesCount || 0} sources &middot; {message.metadata.processingTime}ms
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

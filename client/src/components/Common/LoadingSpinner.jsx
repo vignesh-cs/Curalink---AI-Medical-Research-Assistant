@@ -1,64 +1,61 @@
 // client/src/components/Common/LoadingSpinner.jsx
-// Premium loading components with skeleton screens and progress tracking
+// Curalink v2.0 - Premium Loaders with Logo Animation
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
-// Main Loading Spinner with enhanced animations
-export const LoadingSpinner = ({ size = 'medium', text = 'Loading...', variant = 'primary' }) => {
-    const sizeClasses = {
-        small: 'spinner-small',
-        medium: 'spinner-medium',
-        large: 'spinner-large'
-    };
+// Main Spinner with Curalink Logo
+export const LoadingSpinner = ({ size = 'md', text = '' }) => {
+    const sizes = { sm: 32, md: 48, lg: 72 };
+    const px = sizes[size] || 48;
 
     return (
-        <div className="loading-container">
-            <div className={`loading-spinner ${sizeClasses[size]} spinner-${variant}`}>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-            </div>
-            {text && <span className="loading-text">{text}</span>}
+        <div className="crl-loader">
+            <svg width={px} height={px} viewBox="0 0 64 64" className="crl-loader-svg">
+                <defs>
+                    <linearGradient id="loadGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#0ea5e9"/>
+                        <stop offset="100%" stopColor="#8b5cf6"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="url(#loadGrad)" strokeWidth="2" opacity="0.2"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="url(#loadGrad)" strokeWidth="2.5" 
+                    strokeDasharray="176" strokeDashoffset="132" className="crl-loader-circle"/>
+                <path d="M20 32h24M32 20v24" stroke="url(#loadGrad)" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+            </svg>
+            {text && <span className="crl-loader-text">{text}</span>}
         </div>
     );
 };
 
-// Research Progress Bar - Shows real-time fetching status
+// Research Progress Bar
 export const ResearchProgressBar = ({ stage, progress }) => {
     const stages = [
-        { id: 'query', label: 'Understanding Query', icon: '🔍' },
-        { id: 'pubmed', label: 'PubMed Search', icon: '📚' },
-        { id: 'openalex', label: 'OpenAlex Search', icon: '🔬' },
-        { id: 'trials', label: 'Clinical Trials', icon: '🏥' },
-        { id: 'ranking', label: 'Ranking Results', icon: '📊' },
-        { id: 'llm', label: 'AI Analysis', icon: '🤖' }
+        { id: 'query', label: 'Understanding', icon: '🔍' },
+        { id: 'pubmed', label: 'PubMed', icon: '📚' },
+        { id: 'openalex', label: 'OpenAlex', icon: '🔬' },
+        { id: 'trials', label: 'Trials', icon: '🏥' },
+        { id: 'ranking', label: 'Ranking', icon: '📊' },
+        { id: 'llm', label: 'AI Analysis', icon: '🤖' },
     ];
 
-    const currentIndex = stages.findIndex(s => s.id === stage);
+    const currentIdx = stages.findIndex(s => s.id === stage);
 
     return (
-        <div className="research-progress">
-            <div className="progress-header">
-                <span className="progress-title">Research Pipeline</span>
-                <span className="progress-percentage">{progress}%</span>
+        <div className="crl-progress">
+            <div className="crl-progress-header">
+                <span className="crl-progress-title">Research Pipeline</span>
+                <span className="crl-progress-pct">{progress}%</span>
             </div>
-            <div className="progress-bar-container">
-                <div 
-                    className="progress-bar-fill" 
-                    style={{ width: `${progress}%` }}
-                >
-                    <div className="progress-glow"></div>
+            <div className="crl-progress-bar">
+                <div className="crl-progress-fill" style={{ width: `${progress}%` }}>
+                    <div className="crl-progress-glow"></div>
                 </div>
             </div>
-            <div className="progress-stages">
-                {stages.map((s, idx) => (
-                    <div 
-                        key={s.id}
-                        className={`progress-stage ${idx < currentIndex ? 'completed' : ''} ${idx === currentIndex ? 'active' : ''}`}
-                    >
-                        <span className="stage-icon">{s.icon}</span>
-                        <span className="stage-label">{s.label}</span>
-                        {idx === currentIndex && <span className="stage-pulse"></span>}
+            <div className="crl-progress-stages">
+                {stages.map((s, i) => (
+                    <div key={s.id} className={`crl-stage ${i < currentIdx ? 'crl-stage-done' : ''} ${i === currentIdx ? 'crl-stage-active' : ''}`}>
+                        <span className="crl-stage-icon">{s.icon}</span>
+                        <span className="crl-stage-label">{s.label}</span>
                     </div>
                 ))}
             </div>
@@ -66,59 +63,32 @@ export const ResearchProgressBar = ({ stage, progress }) => {
     );
 };
 
-// Skeleton Loader for Publications
-export const PublicationSkeleton = () => {
-    return (
-        <div className="publication-skeleton">
-            {[1, 2, 3].map((i) => (
-                <div key={i} className="skeleton-card">
-                    <div className="skeleton-header">
-                        <div className="skeleton-badge shimmer"></div>
-                        <div className="skeleton-title shimmer"></div>
-                    </div>
-                    <div className="skeleton-meta">
-                        <div className="skeleton-text-small shimmer"></div>
-                        <div className="skeleton-text-small shimmer"></div>
-                    </div>
-                    <div className="skeleton-authors shimmer"></div>
-                    <div className="skeleton-abstract">
-                        <div className="skeleton-line shimmer"></div>
-                        <div className="skeleton-line shimmer"></div>
-                        <div className="skeleton-line shimmer"></div>
-                        <div className="skeleton-line-short shimmer"></div>
-                    </div>
-                    <div className="skeleton-footer">
-                        <div className="skeleton-link shimmer"></div>
-                        <div className="skeleton-doi shimmer"></div>
-                    </div>
+// Typing Indicator
+export const TypingIndicator = () => (
+    <div className="crl-typing">
+        <span className="crl-typing-text">Curalink is analyzing research</span>
+        <div className="crl-typing-dots">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+);
+
+// Skeleton Loader
+export const SkeletonLoader = ({ count = 3 }) => (
+    <div className="crl-skeleton-list">
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="crl-skeleton-card">
+                <div className="crl-skeleton-header">
+                    <div className="crl-skeleton-badge crl-shimmer"></div>
+                    <div className="crl-skeleton-title crl-shimmer"></div>
                 </div>
-            ))}
-        </div>
-    );
-};
-
-// Typing Indicator for LLM Response
-export const TypingIndicator = () => {
-    return (
-        <div className="typing-indicator">
-            <span className="typing-text">Curalink is analyzing research</span>
-            <div className="typing-dots">
-                <span className="typing-dot"></span>
-                <span className="typing-dot"></span>
-                <span className="typing-dot"></span>
+                <div className="crl-skeleton-line crl-shimmer"></div>
+                <div className="crl-skeleton-line crl-shimmer" style={{ width: '70%' }}></div>
+                <div className="crl-skeleton-line crl-shimmer" style={{ width: '90%' }}></div>
+                <div className="crl-skeleton-line crl-shimmer" style={{ width: '40%' }}></div>
             </div>
-        </div>
-    );
-};
-
-// Pulse Loader for quick operations
-export const PulseLoader = ({ text }) => {
-    return (
-        <div className="pulse-loader">
-            <div className="pulse-ring"></div>
-            <span>{text || 'Processing...'}</span>
-        </div>
-    );
-};
+        ))}
+    </div>
+);
 
 export default LoadingSpinner;

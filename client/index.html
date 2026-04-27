@@ -1,60 +1,67 @@
-<!-- client/index.html -->
-<!-- Updated HTML entry point with proper favicon references -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/medical-logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="/curalink-icon.svg" />
+    <link rel="apple-touch-icon" href="/curalink-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Curalink - AI Medical Research Assistant for evidence-based healthcare information" />
-    <meta name="theme-color" content="#2563eb" />
-    <meta name="keywords" content="medical research, AI assistant, clinical trials, healthcare, PubMed, research publications" />
-    <meta name="author" content="Curalink" />
+    <meta name="description" content="Curalink - AI Medical Research Assistant. Evidence-based answers from real medical research." />
+    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="keywords" content="medical research, AI assistant, clinical trials, PubMed, healthcare AI" />
     
-    <!-- Open Graph / Social Media -->
     <meta property="og:title" content="Curalink - AI Medical Research Assistant" />
-    <meta property="og:description" content="Get evidence-based medical research insights powered by AI" />
+    <meta property="og:description" content="AI-powered medical research with real citations" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/medical-logo.svg" />
+    <meta property="og:image" content="/curalink-icon.svg" />
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     
     <title>Curalink - AI Medical Research Assistant</title>
+    
+    <style>
+        /* Initial loader before React mounts */
+        #crl-preloader {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #0f172a; display: flex; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 0.4s ease; font-family: 'Inter', sans-serif;
+        }
+        #crl-preloader.fade-out { opacity: 0; pointer-events: none; }
+        .crl-preloader-content { text-align: center; }
+        .crl-preloader-svg { width: 80px; height: 80px; animation: crl-preloader-spin 2s linear infinite; }
+        @keyframes crl-preloader-spin { 100% { transform: rotate(360deg); } }
+        .crl-preloader-text { color: #94a3b8; margin-top: 20px; font-size: 14px; }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    
-    <!-- Loading indicator that shows before React loads -->
-    <div id="initial-loading" style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Inter', sans-serif; background: #f8fafc;">
-        <div style="text-align: center;">
-            <img src="/medical-logo.svg" alt="Curalink" style="width: 80px; height: 80px; margin-bottom: 20px;" />
-            <h2 style="color: #1e293b; margin-bottom: 10px;">Curalink</h2>
-            <p style="color: #64748b;">Loading AI Medical Assistant...</p>
+    <!-- Preloader -->
+    <div id="crl-preloader">
+        <div class="crl-preloader-content">
+            <svg class="crl-preloader-svg" viewBox="0 0 64 64">
+                <defs>
+                    <linearGradient id="preGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#0ea5e9"/><stop offset="100%" stopColor="#8b5cf6"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="url(#preGrad)" strokeWidth="2" opacity="0.2"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="url(#preGrad)" strokeWidth="2.5" strokeDasharray="176" strokeDashoffset="44"/>
+                <path d="M20 32h24M32 20v24" stroke="url(#preGrad)" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+            </svg>
+            <p class="crl-preloader-text">Loading Curalink AI...</p>
         </div>
     </div>
-    
+
+    <div id="root"></div>
     <script type="module" src="/src/index.jsx"></script>
     
-    <!-- Remove loading indicator after React mounts -->
     <script>
         window.addEventListener('load', function() {
             setTimeout(function() {
-                var loader = document.getElementById('initial-loading');
-                if (loader) {
-                    loader.style.opacity = '0';
-                    loader.style.transition = 'opacity 0.3s ease';
-                    setTimeout(function() {
-                        if (loader.parentNode) {
-                            loader.parentNode.removeChild(loader);
-                        }
-                    }, 300);
-                }
-            }, 500);
+                var loader = document.getElementById('crl-preloader');
+                if (loader) { loader.classList.add('fade-out');
+                    setTimeout(function() { if (loader.parentNode) loader.parentNode.removeChild(loader); }, 400); }
+            }, 600);
         });
     </script>
 </body>
